@@ -1,0 +1,1 @@
+APP_LIBS := wixel.lib gpio.lib spi_master.lib dma.lib usb.lib usb_cdc_acm.lib
