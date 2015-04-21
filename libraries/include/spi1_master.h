@@ -11,6 +11,10 @@
 #include <cc2511_types.h>
 #include <spi.h>
 
+#ifndef SPI1_CLEAR_SS
+#define SPI1_CLEAR_SS()
+#endif
+
 void spi1MasterInit(void);
 void spi1MasterSetFrequency(uint32 freq);
 void spi1MasterSetClockPolarity(BIT polarity);

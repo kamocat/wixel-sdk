@@ -29,6 +29,7 @@
 #define spiNMasterTransfer          spi0MasterTransfer
 #define spiNMasterSendByte          spi0MasterSendByte
 #define spiNMasterReceiveByte       spi0MasterReceiveByte
+#define CLEAR_SS()				SPI0_CLEAR_SS()
 
 #elif defined(SPI1)
 #include <spi1_master.h>
@@ -49,6 +50,7 @@
 #define spiNMasterTransfer          spi1MasterTransfer
 #define spiNMasterSendByte          spi1MasterSendByte
 #define spiNMasterReceiveByte       spi1MasterReceiveByte
+#define CLEAR_SS()				SPI1_CLEAR_SS()
 #endif
 
 // txPointer points to the last byte that was written to SPI.
@@ -247,5 +249,6 @@ ISR_URX()
     else
     {
         URXNIE = 0;
+	CLEAR_SS(); // Clear the slave-select bit
     }
 }

@@ -39,6 +39,10 @@
 #include <cc2511_types.h>
 #include <spi.h>
 
+#ifndef SPI0_CLEAR_SS
+#define SPI0_CLEAR_SS()
+#endif
+
 /*! Initializes the library.
  *
  * This must be called before any other functions with names that
