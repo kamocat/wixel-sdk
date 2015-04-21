@@ -41,6 +41,7 @@
 
 #ifndef SPI0_CLEAR_SS
 #define SPI0_CLEAR_SS()
+#define SPI0_SET_SS()
 #endif
 
 /*! Initializes the library.

@@ -7,6 +7,9 @@ This app demonstrates the SPI communication on the wixel
 #include <usb_com.h>
 #include <stdio.h>
 #include <gpio.h>
+
+#define SPI0_CLEAR_SS() setDigitalOutput(05, 1)
+#define SPI0_SET_SS() setDigitalOutput(05, 0)
 #include <spi0_master.h>
 
 int32 CODE param_blink_period_ms = 10;

@@ -29,7 +29,8 @@
 #define spiNMasterTransfer          spi0MasterTransfer
 #define spiNMasterSendByte          spi0MasterSendByte
 #define spiNMasterReceiveByte       spi0MasterReceiveByte
-#define CLEAR_SS()				SPI0_CLEAR_SS()
+#define CLEAR_SS()      SPI0_CLEAR_SS()
+#define SET_SS()          SPI0_SET_SS()
 
 #elif defined(SPI1)
 #include <spi1_master.h>
@@ -50,7 +51,8 @@
 #define spiNMasterTransfer          spi1MasterTransfer
 #define spiNMasterSendByte          spi1MasterSendByte
 #define spiNMasterReceiveByte       spi1MasterReceiveByte
-#define CLEAR_SS()				SPI1_CLEAR_SS()
+#define CLEAR_SS()            SPI1_CLEAR_SS()
+#define SET_SS()                SPI1_SET_SS()
 #endif
 
 // txPointer points to the last byte that was written to SPI.
@@ -208,7 +210,8 @@ void spiNMasterTransfer(const uint8 XDATA * txBuffer, uint8 XDATA * rxBuffer, ui
         txPointer = txBuffer;
         rxPointer = rxBuffer;
         bytesLeft = size;
-
+    
+        SET_SS();
         UNDBUF = *txBuffer; // transmit first byte
         URXNIE = 1;         // Enable RX interrupt.
     }
@@ -249,6 +252,6 @@ ISR_URX()
     else
     {
         URXNIE = 0;
-	CLEAR_SS(); // Clear the slave-select bit
+    CLEAR_SS(); // Clear the slave-select bit
     }
 }
