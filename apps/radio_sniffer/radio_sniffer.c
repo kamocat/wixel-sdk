@@ -17,7 +17,7 @@ transmit any packets.
 The output from this app takes the following format:
 
 147> "hello world!"       ! R: -50 L: 104 s:0 PING  p:0 0D0068656C6C6F20776F726C64212A68
- (1)      (2)            (3)  (4)    (5)  (6)  (7)  (8)    (9)
+ (1)      (2)                     (3)  (4)    (5)     (6)  (7)  (8)    (9)
 
 (1) index (line number)
 (2) ASCII representation of packet contents (unprintable bytes are replaced with '?')
@@ -144,8 +144,8 @@ void printPacket(uint8 XDATA * pkt)
         putchar(nibbleToAscii(pkt[j] >> 4));
         putchar(nibbleToAscii(pkt[j]));
     }
-    putchar('\r');
     putchar('\n');
+    putchar('\r');
 }
 
 void printPacketIfNeeded()
