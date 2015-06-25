@@ -1,3 +1,6 @@
+#ifndef RADIO8_H
+#define RADIO8_H
+
 /** radio8 app:
 This app allows realtime status updates between up to 8 devices.
 
@@ -53,7 +56,6 @@ struct rower XDATA my;
 void updateLeds()
 {
     usbShowStatusWithGreenLed();
-    LED_RED_TOGGLE();
 }
 
 uint8 devices_seen() {
@@ -74,11 +76,14 @@ void build_packet( void ) {
 	buffer[1] = my_ID;
 	buffer[2] = devices_seen(); // update this to determine devices seen
 	
-	#if 1
+	#if 0
 	buffer += 3; // now we write the 16 bit values
 	write_int16( my.torque, buffer );
 	write_int16( my.speed, buffer );
 	write_int16( my.damper, buffer );
+	#elif 1
+	strncpy( buffer + 3, "Test packet", 11 );
+	buffer[0] = 13;
 	#else
 	buffer[3] = send.torque >> 8;
 	buffer[4] = send.torque & 0xFF;
@@ -94,18 +99,40 @@ void build_packet( void ) {
 }
 
 void main( void ) {	
-	uint8 XDATA i = 0; // just for doling out processor time
+	uint32 XDATA i = 0; // just for doling out processor time
+	uint8 XDATA buffer[50];
+	uint8 len;
+	uint8 rx_prev_count = 0;
 	
 	systemInit();
 	usbInit();
 	radioMacInit();
 	radioInitAddendum();
 	
+	/*
 	my_ID = param_radio_ID;
 	my.torque = ('T' << 8) | 'q';
 	my.speed = ('S'<<8) | 'p';
 	my.damper = ('D' << 8) | 'm';
+
+	buffer = tx_next_buffer();
+	strncpy( buffer, " Jesus", MAX_PACKET_LEN );
+	buffer[0] = 5;
+	buffer = tx_next_buffer();
+	strncpy( buffer, " loves", MAX_PACKET_LEN );
+	buffer[0] = 5;
+	buffer = tx_next_buffer();
+	strncpy( buffer, " you!", MAX_PACKET_LEN );
+	buffer[0] = 4;
+	*/
 	
+	radioMacStrobe();
+	
+	build_packet();
+	
+	buffer[0] = '\r';
+	buffer[1] = '\n';
+	buffer[5] = '\t';
 	
 	while(1){
 		++i;
@@ -114,7 +141,16 @@ void main( void ) {
 		updateLeds();
 		usbComService();
 		
-		build_packet();
+		
+		if((rx_count != rx_prev_count) && (usbComTxAvailable() > 26) ) {
+			len = u8toc( buffer, rx_count, 2 );
+			strncpy( (buffer + len) , rx_processing, rx_processing[0] );
+			usbComTxSend( buffer, (len + rx_processing[0]) );
+		}
+		
+		//build_packet();
 		
 	}
 }
+
+#endif
