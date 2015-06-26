@@ -72,9 +72,10 @@ uint8 devices_seen() {
 
 void build_packet( void ) {
 	uint8 XDATA * buffer = tx_next_buffer();
+	uint8 DATA copy;
 	buffer[0] = 9;		//Size of packet
 	buffer[1] = my_ID;
-	buffer[2] = devices_seen(); // update this to determine devices seen
+	//buffer[2] = devices_seen(); // update this to determine devices seen
 	
 	#if 0
 	buffer += 3; // now we write the 16 bit values
@@ -82,8 +83,11 @@ void build_packet( void ) {
 	write_int16( my.speed, buffer );
 	write_int16( my.damper, buffer );
 	#elif 1
-	strncpy( buffer + 3, "Test packet", 11 );
-	buffer[0] = 13;
+	strncpy( buffer + 3, "sent XXX packets\r\n",  18);
+	copy = rx_count;
+	u8toc( buffer, copy, 8);
+	buffer[0] = 21;
+	buffer[2] = '	';
 	#else
 	buffer[3] = send.torque >> 8;
 	buffer[4] = send.torque & 0xFF;
@@ -99,56 +103,71 @@ void build_packet( void ) {
 }
 
 void main( void ) {	
-	uint32 XDATA i = 0; // just for doling out processor time
-	uint8 XDATA buffer[50];
-	uint8 len;
-	uint8 rx_prev_count = 0;
+	uint8 XDATA crc_msg[50];
+	uint8 XDATA id_msg[50];
+	uint8 XDATA timeout_msg[50];
+	uint8 XDATA oops[20];
 	
 	systemInit();
 	usbInit();
 	radioMacInit();
 	radioInitAddendum();
 	
-	/*
-	my_ID = param_radio_ID;
-	my.torque = ('T' << 8) | 'q';
-	my.speed = ('S'<<8) | 'p';
-	my.damper = ('D' << 8) | 'm';
-
-	buffer = tx_next_buffer();
-	strncpy( buffer, " Jesus", MAX_PACKET_LEN );
-	buffer[0] = 5;
-	buffer = tx_next_buffer();
-	strncpy( buffer, " loves", MAX_PACKET_LEN );
-	buffer[0] = 5;
-	buffer = tx_next_buffer();
-	strncpy( buffer, " you!", MAX_PACKET_LEN );
-	buffer[0] = 4;
-	*/
+	strncpy( crc_msg, "	XXX messages had bad CRC.\r\n", 28);
+	strncpy( id_msg, "	XXX was the radio ID recieved.\r\n", 33);
+	strncpy( timeout_msg, "	Radio has timed out.\r\n", 23);
+	strncpy( oops, "	Oops.\r\n", 8 );
 	
-	radioMacStrobe();
+	
 	
 	build_packet();
-	
-	buffer[0] = '\r';
-	buffer[1] = '\n';
-	buffer[5] = '\t';
-	
+	radioMacStrobe();
+
 	while(1){
-		++i;
-		
 		boardService();
 		updateLeds();
 		usbComService();
+		build_packet();
 		
 		
-		if((rx_count != rx_prev_count) && (usbComTxAvailable() > 26) ) {
-			len = u8toc( buffer, rx_count, 2 );
-			strncpy( (buffer + len) , rx_processing, rx_processing[0] );
-			usbComTxSend( buffer, (len + rx_processing[0]) );
+		if(usbComTxAvailable() > 50){
+			/* Events can get lost here, if they occur while this is running, or occur twice
+			before this can handle them. However, this is a realtime system, so we should
+			just drop the extra events and handle what we can. */
+			switch( respond_state ) {
+				case MESSAGE_RCV:
+					rx_processing[0] = '^';
+					rx_processing[1] = '_';
+					rx_processing[2] = '^';
+					usbComTxSend(rx_processing+1, rx_processing[0] - 1);
+					break;
+				
+				case BAD_CRC:
+					 // Print the number of failed CRCs
+					u8toc( crc_msg, bad_crc, 1);
+					usbComTxSend( crc_msg, 28);
+				
+				
+				case RADIO_ID_ERROR:
+					// Print the radio ID we recieved
+					u8toc( id_msg, rx_packet[1], 1);
+					usbComTxSend( id_msg, 33);
+					break;
+				
+				case RADIO_TIMEOUT:
+					usbComTxSend( timeout_msg, 23);
+				
+				default:
+					//usbComTxSend( oops, 7);
+					break;
+			}
+			respond_state = 0;
 		}
 		
-		//build_packet();
+		if( usbComRxAvailable() ) {
+			usbComRxReceiveByte();
+			radioMacStrobe();
+		}
 		
 	}
 }
