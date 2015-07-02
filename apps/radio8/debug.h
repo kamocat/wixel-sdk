@@ -52,11 +52,11 @@ uint8 u8toc( char* dest, uint8 source, uint8 offset ) {
 	ones = source - (10 * tens);
 	tens -= 10 * hundreds;
 	
-	dest[offset++] = hundreds + '0';
-	dest[offset++] = tens + '0';
-	dest[offset++] = ones + '0';
+	dest[offset] = hundreds + '0';
+	dest[offset + 1] = tens + '0';
+	dest[offset + 2] = ones + '0';
 	
-	return offset;
+	return( offset + 3);
 }
 
 
