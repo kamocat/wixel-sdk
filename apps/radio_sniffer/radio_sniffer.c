@@ -115,6 +115,8 @@ void printPacket(uint8 XDATA * pkt)
     // CRC
     putchar((pkt[len + 2] & 0x80) ? ' ' : '!');
     putchar(' ');
+    
+    #if 0 //Disable the fancy not-useful information
 
     // RSSI, LQI
     printf("R:%4d ", (int8)(pkt[len + 1])/2 - 71);
@@ -137,6 +139,7 @@ void printPacket(uint8 XDATA * pkt)
     putchar(':');
     putchar(nibbleToAscii(pkt[1] >> 1 & 0xF));
     putchar(' ');
+    #endif
     
     // packet contents in hex
     for(j = 0; j < len + 1; j++)  // add 1 for length byte
