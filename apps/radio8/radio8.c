@@ -10,58 +10,55 @@ Currently we are testing sequencing, to ensure all devices get time to speak.
 
 /** Dependencies **************************************************************/
 
-#include "radio8.h"
+#include <radio_mac.h>
+#include <board.h>
+#include <cc2511_map.h>
+#include <dma.h>
+#include <radio_registers.h>
 #include <usb.h>
 #include <usb_com.h>
 
-#include <stdio.h>
-#include <string.h>
+/** Global Variables *********************************/
+
+#define MAX_TIMEOUT 50
+#define MAX_PACKET_LEN 5
+
+int32 CODE param_radio_channel = 128; // 0 - 255. Seperate by 2 channels to avoid crosstalk
+
+uint8 XDATA rx_packet[MAX_PACKET_LEN + 4]; // room to store CRC
+volatile uint8 DATA message_available = 0;
+
+
 
 /** Functions *****************************************************************/
 
+
+/* This function is declared in radio_mac.h, but needs to be defined here */
+void radioMacEventHandler( uint8 event) {
+		
+	if( event == RADIO_MAC_EVENT_RX){ //Packet recieved
+		message_available = 1;
+		LED_RED_TOGGLE();
+	}
+	radioMacRx( rx_packet, MAX_TIMEOUT );
+}
+
 void main( void ) {	
-	uint8 XDATA * buffer;
-	uint8 DATA tmp;
 	
-	
+	CHANNR = param_radio_channel;
+	PKTLEN = MAX_PACKET_LEN;
 	systemInit();
 	usbInit();
 	radioMacInit();
-	radioInitAddendum();
+	radioMacStrobe();
 
 	while(1){
 		boardService();
-		//usbShowStatusWithGreenLed();
 		usbComService();
 		
-		#if 1
-		if(usbComTxAvailable() > 50){
-			/* Events can get lost here, if they occur while this is running, or occur twice
-			before this can handle them. However, this is a realtime system, so we should
-			just drop the extra events and handle what we can. */
-			switch( respond_state ) {
-				case RADIO_ID_ERROR:
-				case BAD_CRC:
-				case MESSAGE_RCV:
-					usbComTxSendByte(rx_processing[1]);
-					break;
-				
-				default:
-					break;
-			}
-			respond_state = 0;
+		if( message_available && usbComTxAvailable() ){
+			usbComTxSendByte(rx_packet[1]);
+			message_available = 0;
 		}
-		#endif
-		
-		if( usbComRxAvailable() ) {
-			buffer = tx_next_buffer();
-			tmp = usbComRxReceiveByte();
-			usbComTxSendByte( tmp );
-			buffer[1] = tmp;
-			buffer[0] = 2;
-			tx_packet = buffer;
-			radioMacStrobe();
-		}
-		
 	}
 }
