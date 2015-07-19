@@ -38,7 +38,7 @@ void radioMacEventHandler( uint8 event) {
 		
 	if( event == RADIO_MAC_EVENT_RX){ //Packet recieved
 		message_available = 1;
-		LED_RED_TOGGLE();
+		LED_YELLOW_TOGGLE();
 	}
 	radioMacRx( rx_packet, MAX_TIMEOUT );
 }
@@ -53,7 +53,6 @@ void main( void ) {
 	radioMacStrobe();
 
 	while(1){
-		boardService();
 		usbComService();
 		
 		if( message_available && usbComTxAvailable() ){
