@@ -20,20 +20,53 @@ This app allows realtime status updates between up to 8 devices.
 
 #define MAX_TIMEOUT 50
 #define MAX_PACKET_LEN 5
-#define RX_BUFFER_COUNT 4
+#define RX_ARRAY_SIZE 4
+#define RX_ARRAY_MAX (RX_ARRAY_SIZE - 1)
 
 int32 CODE param_radio_channel = 128; // 0 - 255. Seperate by 2 channels to avoid crosstalk
 
 uint8 XDATA * rx_packet;
 volatile uint8 DATA latest_rx_index = 0;
-uint8 XDATA rx_buffer_array[RX_BUFFER_COUNT][MAX_PACKET_LEN + 4];// room to store CRC
-uint8 DATA rx_buffer_index = 0;
+uint8 XDATA rx_array[RX_ARRAY_SIZE][MAX_PACKET_LEN + 4];// room to store CRC
+uint8 DATA rx_array_front = 0;
+uint8 DATA rx_array_len = 0;
 
 /** Functions *****************************************************************/
 
-#define rx_next_buffer() rx_buffer_array[rx_buffer_index = (rx_buffer_index ? rx_buffer_index : RX_BUFFER_COUNT) - 1 ]
-#define tx_next_buffer() tx_buffer_array[tx_buffer_index = (tx_buffer_index ? tx_buffer_index : TX_BUFFER_COUNT) - 1 ]
+#define RX_AVAILABLE() (rx_array_len > 0) // We need to reserve one space for the active recieving
 
+uint8 XDATA * dequeue_rx_packet(){
+	uint8 tmp = 0;
+	if( RX_AVAILABLE() ) { 
+		tmp = rx_array_front;
+		//disable interrupts
+		
+		--rx_array_len;
+		if( rx_array_front == RX_ARRAY_MAX )
+			rx_array_front = 0;
+		else
+			++rx_array_front;
+		
+		//enable interrupts
+		
+	}
+	return rx_array[tmp];
+}
+
+
+
+uint8 XDATA * enqueue_rx_packet() {
+	uint8 tmp = rx_array_front;
+	if( rx_array_len < RX_ARRAY_SIZE ) { // If there's no room, overwrite the most recent
+		++rx_array_len;
+	}
+	tmp += rx_array_len;
+	if( tmp > RX_ARRAY_MAX ) {
+		tmp -= RX_ARRAY_SIZE;
+	}
+	return rx_array[tmp];
+}
+		
 
 
 
@@ -41,15 +74,14 @@ uint8 DATA rx_buffer_index = 0;
 void radioMacEventHandler( uint8 event) {
 		
 	if( event == RADIO_MAC_EVENT_RX){ //Packet recieved
-		latest_rx_index = rx_buffer_index;
 		LED_YELLOW_TOGGLE();
+		rx_packet = enqueue_rx_packet();
 	}
-	rx_packet = rx_next_buffer();
 	radioMacRx( rx_packet, MAX_TIMEOUT );
 }
 
 void main( void ) {	
-	uint8 PDATA prev_rx_index = 0;
+	uint8 XDATA * rx_processing;
 	CHANNR = param_radio_channel;
 	PKTLEN = MAX_PACKET_LEN;
 	systemInit();
@@ -60,9 +92,9 @@ void main( void ) {
 	while(1){
 		usbComService();
 		
-		if( (latest_rx_index != prev_rx_index) && usbComTxAvailable() ){
-			prev_rx_index = latest_rx_index;
-			usbComTxSendByte(rx_buffer_array[prev_rx_index][1]);
+		if( RX_AVAILABLE() && usbComTxAvailable() ){
+			rx_processing = dequeue_rx_packet();
+			usbComTxSendByte(rx_processing[1]);
 		}
 	}
 }
