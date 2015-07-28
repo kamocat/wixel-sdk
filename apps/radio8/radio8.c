@@ -4,8 +4,6 @@ This app allows realtime status updates between up to 8 devices.
 
 == Description ==
 
-Currently we are testing sequencing, to ensure all devices get time to speak.
-
 */
 
 /** Dependencies **************************************************************/
@@ -22,29 +20,36 @@ Currently we are testing sequencing, to ensure all devices get time to speak.
 
 #define MAX_TIMEOUT 50
 #define MAX_PACKET_LEN 5
+#define RX_BUFFER_COUNT 4
 
 int32 CODE param_radio_channel = 128; // 0 - 255. Seperate by 2 channels to avoid crosstalk
 
-uint8 XDATA rx_packet[MAX_PACKET_LEN + 4]; // room to store CRC
-volatile uint8 DATA message_available = 0;
-
-
+uint8 XDATA * rx_packet;
+volatile uint8 DATA latest_rx_index = 0;
+uint8 XDATA rx_buffer_array[RX_BUFFER_COUNT][MAX_PACKET_LEN + 4];// room to store CRC
+uint8 DATA rx_buffer_index = 0;
 
 /** Functions *****************************************************************/
+
+#define rx_next_buffer() rx_buffer_array[rx_buffer_index = (rx_buffer_index ? rx_buffer_index : RX_BUFFER_COUNT) - 1 ]
+#define tx_next_buffer() tx_buffer_array[tx_buffer_index = (tx_buffer_index ? tx_buffer_index : TX_BUFFER_COUNT) - 1 ]
+
+
 
 
 /* This function is declared in radio_mac.h, but needs to be defined here */
 void radioMacEventHandler( uint8 event) {
 		
 	if( event == RADIO_MAC_EVENT_RX){ //Packet recieved
-		message_available = 1;
+		latest_rx_index = rx_buffer_index;
 		LED_YELLOW_TOGGLE();
 	}
+	rx_packet = rx_next_buffer();
 	radioMacRx( rx_packet, MAX_TIMEOUT );
 }
 
 void main( void ) {	
-	
+	uint8 PDATA prev_rx_index = 0;
 	CHANNR = param_radio_channel;
 	PKTLEN = MAX_PACKET_LEN;
 	systemInit();
@@ -55,9 +60,9 @@ void main( void ) {
 	while(1){
 		usbComService();
 		
-		if( message_available && usbComTxAvailable() ){
-			usbComTxSendByte(rx_packet[1]);
-			message_available = 0;
+		if( (latest_rx_index != prev_rx_index) && usbComTxAvailable() ){
+			prev_rx_index = latest_rx_index;
+			usbComTxSendByte(rx_buffer_array[prev_rx_index][1]);
 		}
 	}
 }
