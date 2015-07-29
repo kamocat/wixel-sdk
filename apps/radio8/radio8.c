@@ -19,14 +19,13 @@ This app allows realtime status updates between up to 8 devices.
 /** Global Variables *********************************/
 
 #define MAX_TIMEOUT 50
-#define MAX_PACKET_LEN 5
+#define MAX_PACKET_LEN 30
 #define RX_ARRAY_SIZE 4
 #define RX_ARRAY_MAX (RX_ARRAY_SIZE - 1)
 
 int32 CODE param_radio_channel = 128; // 0 - 255. Seperate by 2 channels to avoid crosstalk
 
 uint8 XDATA * rx_packet;
-volatile uint8 DATA latest_rx_index = 0;
 uint8 XDATA rx_array[RX_ARRAY_SIZE][MAX_PACKET_LEN + 4];// room to store CRC
 uint8 DATA rx_array_front = 0;
 uint8 DATA rx_array_len = 0;
@@ -35,11 +34,15 @@ uint8 DATA rx_array_len = 0;
 
 #define RX_AVAILABLE() (rx_array_len > 0) // We need to reserve one space for the active recieving
 
+#define ENABLE_RADIO_INT() IEN2 |= 0x01
+#define DISABLE_RADIO_INT() IEN2 &= 0xFE
+
 uint8 XDATA * dequeue_rx_packet(){
 	uint8 tmp = 0;
 	if( RX_AVAILABLE() ) { 
 		tmp = rx_array_front;
-		//disable interrupts
+		
+		DISABLE_RADIO_INT();
 		
 		--rx_array_len;
 		if( rx_array_front == RX_ARRAY_MAX )
@@ -47,7 +50,7 @@ uint8 XDATA * dequeue_rx_packet(){
 		else
 			++rx_array_front;
 		
-		//enable interrupts
+		ENABLE_RADIO_INT();
 		
 	}
 	return rx_array[tmp];
