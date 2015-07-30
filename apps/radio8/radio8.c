@@ -85,6 +85,7 @@ void radioMacEventHandler( uint8 event) {
 
 void main( void ) {	
 	uint8 XDATA * rx_processing;
+	char XDATA * print_string[20];
 	CHANNR = param_radio_channel;
 	PKTLEN = MAX_PACKET_LEN;
 	systemInit();
@@ -95,9 +96,10 @@ void main( void ) {
 	while(1){
 		usbComService();
 		
-		if( RX_AVAILABLE() && usbComTxAvailable() ){
+		if( RX_AVAILABLE() && (usbComTxAvailable() > 5 )){
 			rx_processing = dequeue_rx_packet();
-			usbComTxSendByte(rx_processing[1]);
+			
+			usbComTxSend((rx_processing+2), 5);
 		}
 	}
 }
