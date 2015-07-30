@@ -25,6 +25,8 @@ Currently we are testing sequencing, to ensure all devices get time to speak.
 
 /** Global Variables *********************************/
 
+int32 CODE param_loop_delay = 10;
+
 #define RADIO_COUNT 9
 #define MAX_TIMEOUT 50
 #define MAX_PACKET_LEN 30
@@ -80,16 +82,16 @@ void setup_numerals( void ) {
 	for(; i < 10; ++i ) {
 		nums[i][1] = i;
 	}
-	strncpy( &nums[0][2], "Zero ", 5 );
-	strncpy( &nums[1][2], "One  ", 5 );
-	strncpy( &nums[2][2], "Two  ", 5 );
+	strncpy( &nums[0][2], " Zero", 5 );
+	strncpy( &nums[1][2], "  One", 5 );
+	strncpy( &nums[2][2], " Two ", 5 );
 	strncpy( &nums[3][2], "Three", 5 );
-	strncpy( &nums[4][2], "Four ", 5 );
-	strncpy( &nums[5][2], "Five ", 5 );
-	strncpy( &nums[6][2], "Six  ", 5 );
+	strncpy( &nums[4][2], " Four", 5 );
+	strncpy( &nums[5][2], " Five", 5 );
+	strncpy( &nums[6][2], " Six ", 5 );
 	strncpy( &nums[7][2], "Seven", 5 );
 	strncpy( &nums[8][2], "Eight", 5 );
-	strncpy( &nums[9][2], "Nine ", 5 );
+	strncpy( &nums[9][2], " Nine", 5 );
 }
 
 void radioMacEventHandler( uint8 event) {
@@ -120,25 +122,18 @@ void main( void ) {
 		usbComService();
 		
 
-		if( --i == 0 ) {
-			i = 100;
-			n = n < RADIO_COUNT ? (n+1) : 1;
-			new_packet = nums[n];
-			
-			new_packet[0] = 6; // lenght of packet
-			enqueue_tx_packet( new_packet );
-			
-			if( !LED_RED_STATE ) { //if it's not currently transmitting, get it started
-				radioMacStrobe();
-			}
-			
-		}
+
+		i = 2;
+		n = n < RADIO_COUNT ? (n+1) : 1;
+		new_packet = nums[n];
 		
-		if( usbComRxAvailable() ) {
-			letter = usbComRxReceiveByte();
-		} else {
-			delayMs(5);
+		new_packet[0] = 6; // lenght of packet
+		enqueue_tx_packet( new_packet );
+		
+		if( !LED_RED_STATE ) { //if it's not currently transmitting, get it started
+			radioMacStrobe();
 		}
+		delayMs(param_loop_delay);
 
 	}
 }
